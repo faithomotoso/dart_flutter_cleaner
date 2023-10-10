@@ -52,10 +52,12 @@ void main(List<String> arguments) async {
 Future<bool> runCleanCommand(Directory directory) async {
   stdout.writeln("Cleaning ${directory.absolute.path}");
 
-  Process startedProcess = await Process.start("flutter clean", [],
+  Process startedProcess = await Process.start("flutter", ["clean"],
       workingDirectory: directory.absolute.path, runInShell: true, );
 
+  // This `prints` the outputs of the startedProcess
   await stdout.addStream(startedProcess.stdout);
+  await stdout.addStream(startedProcess.stderr);
 
   stdout.writeln("");
 
