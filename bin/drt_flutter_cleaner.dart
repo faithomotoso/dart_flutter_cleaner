@@ -9,7 +9,8 @@ void main(List<String> arguments) async {
         mandatory: true,
         abbr: "p",
         help:
-            "Provide the full path to the root folder e.g. [root]/AndroidStudioProjects");
+            "Provide the full path to the root folder e.g. <root folder>/AndroidStudioProjects",
+        valueHelp: "path");
 
   try {
     ArgResults argResults = argParser.parse(arguments);
@@ -36,7 +37,8 @@ void main(List<String> arguments) async {
       // Run flutter clean
       try {
         await runCleanCommand(projDir).catchError((e) {
-          stdout.writeln("Error cleaning project ${projDir.absolute.path} -> $e");
+          stdout
+              .writeln("Error cleaning project ${projDir.absolute.path} -> $e");
           return Future.value(true);
         });
       } on Exception catch (e) {
@@ -44,16 +46,22 @@ void main(List<String> arguments) async {
       }
     }
   } catch (e, s) {
-    stderr.writeln("OOps: $e");
-    stderr.writeln(s);
+    print("OOps: $e");
+    // print(s);
+
+    stderr.writeln("Usage: ${argParser.usage}");
   }
 }
 
 Future<bool> runCleanCommand(Directory directory) async {
   stdout.writeln("Cleaning ${directory.absolute.path}");
 
-  Process startedProcess = await Process.start("flutter", ["clean"],
-      workingDirectory: directory.absolute.path, runInShell: true, );
+  Process startedProcess = await Process.start(
+    "flutter",
+    ["clean"],
+    workingDirectory: directory.absolute.path,
+    runInShell: true,
+  );
 
   // This `prints` the outputs of the startedProcess
   await stdout.addStream(startedProcess.stdout);
