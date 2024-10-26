@@ -1,5 +1,6 @@
 import 'dart:collection';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:args/args.dart';
 
@@ -33,6 +34,7 @@ void main(List<String> arguments) async {
         .where((f) => f.absolute.path.contains("pubspec"))
         .map((e) => e.parent));
 
+    final DateTime startTime = DateTime.now();
     for (Directory projDir in flutterDirs) {
       // Run flutter clean
       try {
@@ -45,6 +47,8 @@ void main(List<String> arguments) async {
         stderr.writeln("Error cleaning ${projDir.absolute.path}");
       }
     }
+
+    stdout.writeln("Cleaned files in ${DateTime.now().difference(startTime).inSeconds} second(s)");
   } catch (e, s) {
     print("OOps: $e");
     // print(s);
