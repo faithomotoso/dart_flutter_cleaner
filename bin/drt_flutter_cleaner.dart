@@ -53,7 +53,7 @@ void main(List<String> arguments) async {
     stdout.writeln(
         "Cleaned files in ${DateTime.now().difference(startTime).inSeconds} second(s)");
   } catch (e, s) {
-    print("OOps: $e");
+    print("OOps: $e, $s");
     // print(s);
 
     stderr.writeln("Usage: ${argParser.usage}");
@@ -92,7 +92,7 @@ Future<bool> runCleanCommand(Directory directory) async {
     "flutter",
     ["clean"],
     workingDirectory: directory.absolute.path,
-    runInShell: false,
+    runInShell: Platform.isWindows ? true : false,
   );
 
   startedProcess.stdout.transform(utf8.decoder).listen(stdout.writeln);
