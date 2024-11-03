@@ -14,7 +14,11 @@ void main(List<String> arguments) async {
         valueHelp: "path")
     ..addFlag("parallel",
         help:
-            "Run the clean command in parallel (not stable and encounters flutter lock and uses more CPU)");
+            "Run the clean command in parallel (not stable and encounters flutter lock and uses more CPU)")
+    ..addOption("step",
+        mandatory: false,
+        help:
+            "Number of processes to run in parallel, defaults to 10 (needs the parallel flag alongside)");
 
   try {
     ArgResults argResults = argParser.parse(arguments);
@@ -40,7 +44,8 @@ void main(List<String> arguments) async {
     final DateTime startTime = DateTime.now();
 
     if (argResults.wasParsed("parallel")) {
-      await runInParallel(flutterDirs);
+      await runInParallel(flutterDirs.toList(),
+          step: int.tryParse(argResults["step"]));
     } else {
       await runSequential(flutterDirs);
     }
@@ -55,19 +60,16 @@ void main(List<String> arguments) async {
   }
 }
 
-Future runInParallel(Iterable<Directory> dirs) async {
-  await Future.wait(
-    List<Future>.from(
-      dirs.map(
-        (dir) => runCleanCommand(dir).catchError(
-          (e) {
-            stdout.writeln("Error cleaning project ${dir.absolute.path} -> $e");
-            return Future.value(true);
-          },
-        ),
-      ),
-    ),
-  );
+Future runInParallel(List<Directory> dirs, {int? step}) async {
+  step ??= 10;
+  int progress = 0;
+
+  while (progress < dirs.length) {
+    await Future.wait(dirs
+        .getRange(progress, (progress + step - 1).clamp(0, dirs.length - 1))
+        .map(runCleanCommand));
+    progress += step;
+  }
 }
 
 Future runSequential(Iterable<Directory> dirs) async {
@@ -90,7 +92,7 @@ Future<bool> runCleanCommand(Directory directory) async {
     "flutter",
     ["clean"],
     workingDirectory: directory.absolute.path,
-    runInShell: true,
+    runInShell: false,
   );
 
   startedProcess.stdout.transform(utf8.decoder).listen(stdout.writeln);
