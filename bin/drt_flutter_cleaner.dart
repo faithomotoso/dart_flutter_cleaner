@@ -74,14 +74,10 @@ Future runInParallel(List<Directory> dirs, {int? step}) async {
 
 Future runSequential(Iterable<Directory> dirs) async {
   for (Directory projDir in dirs) {
-    try {
-      await runCleanCommand(projDir).catchError((e) {
-        stdout.writeln("Error cleaning project ${projDir.absolute.path} -> $e");
-        return Future.value(true);
-      });
-    } on Exception catch (e) {
-      stderr.writeln("Error cleaning ${projDir.absolute.path} -> $e");
-    }
+    await runCleanCommand(projDir).catchError((e) {
+      stdout.writeln("Error cleaning project ${projDir.absolute.path} -> $e");
+      return Future.value(true);
+    });
   }
 }
 
