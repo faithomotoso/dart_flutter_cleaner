@@ -1,6 +1,6 @@
 import 'dart:collection';
+import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:args/args.dart';
 
@@ -11,7 +11,14 @@ void main(List<String> arguments) async {
         abbr: "p",
         help:
             "Provide the full path to the root folder e.g. <root folder>/AndroidStudioProjects",
-        valueHelp: "path");
+        valueHelp: "path")
+    ..addFlag("parallel",
+        help:
+            "Run the clean command in parallel (not stable and encounters flutter lock and uses more CPU)")
+    ..addOption("step",
+        mandatory: false,
+        help:
+            "Number of processes to run in parallel, defaults to 10 (needs the parallel flag alongside)");
 
   try {
     ArgResults argResults = argParser.parse(arguments);
@@ -35,25 +42,42 @@ void main(List<String> arguments) async {
         .map((e) => e.parent));
 
     final DateTime startTime = DateTime.now();
-    for (Directory projDir in flutterDirs) {
-      // Run flutter clean
-      try {
-        await runCleanCommand(projDir).catchError((e) {
-          stdout
-              .writeln("Error cleaning project ${projDir.absolute.path} -> $e");
-          return Future.value(true);
-        });
-      } on Exception catch (e) {
-        stderr.writeln("Error cleaning ${projDir.absolute.path}");
-      }
+
+    if (argResults.wasParsed("parallel")) {
+      await runInParallel(flutterDirs.toList(),
+          step: int.tryParse(argResults["step"]));
+    } else {
+      await runSequential(flutterDirs);
     }
 
-    stdout.writeln("Cleaned files in ${DateTime.now().difference(startTime).inSeconds} second(s)");
+    stdout.writeln(
+        "Cleaned files in ${DateTime.now().difference(startTime).inSeconds} second(s)");
   } catch (e, s) {
-    print("OOps: $e");
+    print("OOps: $e, $s");
     // print(s);
 
     stderr.writeln("Usage: ${argParser.usage}");
+  }
+}
+
+Future runInParallel(List<Directory> dirs, {int? step}) async {
+  step ??= 10;
+  int progress = 0;
+
+  while (progress < dirs.length) {
+    await Future.wait(dirs
+        .getRange(progress, (progress + step - 1).clamp(0, dirs.length - 1))
+        .map(runCleanCommand));
+    progress += step;
+  }
+}
+
+Future runSequential(Iterable<Directory> dirs) async {
+  for (Directory projDir in dirs) {
+    await runCleanCommand(projDir).catchError((e) {
+      stdout.writeln("Error cleaning project ${projDir.absolute.path} -> $e");
+      return Future.value(true);
+    });
   }
 }
 
@@ -64,14 +88,13 @@ Future<bool> runCleanCommand(Directory directory) async {
     "flutter",
     ["clean"],
     workingDirectory: directory.absolute.path,
-    runInShell: true,
+    runInShell: Platform.isWindows ? true : false,
   );
 
-  // This `prints` the outputs of the startedProcess
-  await stdout.addStream(startedProcess.stdout);
-  await stdout.addStream(startedProcess.stderr);
+  startedProcess.stdout.transform(utf8.decoder).listen(stdout.writeln);
+  startedProcess.stderr.transform(utf8.decoder).listen(stdout.writeln);
 
-  stdout.writeln("");
+  await startedProcess.exitCode;
 
   return true;
 }
