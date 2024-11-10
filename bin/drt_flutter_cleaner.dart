@@ -44,8 +44,12 @@ void main(List<String> arguments) async {
     final DateTime startTime = DateTime.now();
 
     if (argResults.wasParsed("parallel")) {
-      await runInParallel(flutterDirs.toList(),
-          step: int.tryParse(argResults["step"]));
+      int? step;
+      if (argResults.wasParsed("step")) {
+        step = int.tryParse(argResults["step"]);
+      }
+
+      await runInParallel(flutterDirs.toList(), step: step);
     } else {
       await runSequential(flutterDirs);
     }
