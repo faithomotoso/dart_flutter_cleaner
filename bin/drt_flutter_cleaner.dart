@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
@@ -33,13 +34,22 @@ void main(List<String> arguments) async {
     );
 
     final Directory rootDir = Directory(rootPath);
-    List<FileSystemEntity> rootEntities =
-        await rootDir.list(recursive: true).toList();
 
-    flutterDirs.addAll(rootEntities
-        .whereType<File>()
-        .where((f) => f.absolute.path.contains("pubspec"))
-        .map((e) => e.parent));
+    Stream<FileSystemEntity> fileStream = rootDir.list(recursive: true);
+
+    Completer streamCompleter = Completer();
+
+    fileStream.listen((v) {
+      if (v.absolute.path.contains("pubspec")) {
+        flutterDirs.add(v.parent);
+      }
+    }, onError: (e) {
+      stderr.writeln("Error listening to stream: $e");
+    }, onDone: () {
+      streamCompleter.complete();
+    });
+
+    await streamCompleter.future;
 
     final DateTime startTime = DateTime.now();
 
